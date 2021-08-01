@@ -1,2 +1,2 @@
 import os
-#os.system('bash "./buildweb.sh"')
+os.system('bash "./buildweb.sh"')
