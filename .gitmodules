@@ -1,0 +1,3 @@
+[submodule "HydroponicWeb"]
+	path = HydroponicWeb
+	url = https://github.com/axiom4/HydroponicWeb.git
