@@ -1,5 +1,8 @@
 #include <hydroponic.h>
 
+#include <AsyncJson.h>
+#include <ArduinoJson.h>
+
 static AsyncWebServer server(80);
 
 struct hydroponicConfig *s_config;
@@ -168,18 +171,38 @@ void handleCalibrateWater(AsyncWebServerRequest *request) {
   request->send(200, "text/html", getPage(body));
 }
 
+void handleGetConfig(AsyncWebServerRequest *request) {
+  struct hydroponicConfig *config;
+  config = eepromReadData();
+
+  String json = "{";
+  json += "\t\"device\": \"" + String(config->config_u.config.device) + "\",\n";
+  json += "\t\"wifi_ssid\": \"" + String(config->config_u.config.wifi_ssid) + "\",\n";
+  json += "\t\"wifi_password\": \"" + String(config->config_u.config.wifi_password) + "\",\n";
+  json += "\t\"ntp_sever\": \"" + String(config->config_u.config.ntp_sever) + "\",\n";
+  json += "\t\"hostname\": \"" + String(config->config_u.config.hostname) + "\",\n";
+  json += "\t\"moisture_air_value\": " + String(config->config_u.config.AirValue) + ",\n";
+  json += "\t\"moisture_water_value\": " + String(config->config_u.config.WaterValue) + "\n";
+  json += "}";
+
+  free(config);
+  request->send(200, "application/json", json);
+}
+
 void webserverSetup(struct hydroponicConfig *config) {
   s_config = config;
   //   server.on("/", HTTP_GET, [](struct idroponicConfig *config) { handleSetup(config); });  // Call the 'handleRoot' function when a client requests URI "/"
-  // server.on("/", handleRoot);
+  server.on("/settings", handleRoot);
+  server.on("/setup", HTTP_POST, handleSetup);
+  server.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico");
   server.serveStatic("/", SPIFFS, "/").setCacheControl("max-age=31536000").setDefaultFile("index.html");
-  server.on("/calibrate", handleCalibrate);
-  server.on("/calibrate_air", handleCalibrateAir);
-  server.on("/calibrate_water", handleCalibrateWater);
-  server.on("/setup", HTTP_GET, [](AsyncWebServerRequest *request) { request->redirect("/"); });
-  server.on("/setup", HTTP_POST, handleSetup);  // Call the 'handleLogin' function when a POST request is made to URI "/setup"
-  server.onNotFound(handleNotFound);            // When a client requests an unknown URI (i.e. something other than "/"), call function "handleNotFound"
-  server.serveStatic("/page", SPIFFS, "/index.html");
+
+  server.on("/rest/getconfig", HTTP_GET, handleGetConfig);
+
+  // AsyncCallbackJsonWebHandler *handlerGetConfig = new AsyncCallbackJsonWebHandler("/rest/getconfig", handleGetConfig);
+  // server.addHandler(handlerGetConfig);
+
+  server.onNotFound(handleNotFound);
 
   server.begin();  // Actually start the server
   Serial.println("HTTP server started");
