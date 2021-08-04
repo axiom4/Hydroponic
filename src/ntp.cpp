@@ -43,8 +43,8 @@ TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};    // Central European Sta
 Timezone CE(CEST, CET);
 
 void ntpSetup(struct hydroponicConfig *config) {
-  Serial.printf("Setup NTP server: %s\n", config->config_u.config.ntp_sever);
-  NTPClient timeClient(ntpUDP, config->config_u.config.ntp_sever, GTMOffset * 60 * 60, 60 * 60 * 1000);
+  Serial.printf("Setup NTP server: %s\n", config->config_u.config.ntp_server);
+  NTPClient timeClient(ntpUDP, config->config_u.config.ntp_server, GTMOffset * 60 * 60, 60 * 60 * 1000);
 
   timeClient.begin();
 

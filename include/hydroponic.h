@@ -43,7 +43,7 @@ struct hydroponic_config {
   char device[20];
   char wifi_ssid[100];
   char wifi_password[100];
-  char ntp_sever[100];
+  char ntp_server[100];
   char hostname[100];
   int AirValue;
   int WaterValue;

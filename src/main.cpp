@@ -1,4 +1,9 @@
 #include <hydroponic.h>
+#include <DNSServer.h>
+
+int wifi_ap = 0;
+DNSServer dnsServer;
+
 const byte led_gpio = 33;
 
 byte relON[] = {0xA0, 0x01, 0x01, 0xA2};   // Hex command to send to serial for open relay
@@ -62,7 +67,7 @@ void setup() {
     strcpy(config->config_u.config.device, DEVICE);
     strcpy(config->config_u.config.wifi_ssid, WIFI_DEFAULT_SSID);
     strcpy(config->config_u.config.wifi_password, WIFI_DEFAULT_PASSWD);
-    strcpy(config->config_u.config.ntp_sever, DEFAULT_NTP_SERVER);
+    strcpy(config->config_u.config.ntp_server, DEFAULT_NTP_SERVER);
     strcpy(config->config_u.config.hostname, DEFAULT_HOSTAME);
     config->config_u.config.AirValue = DEFAULT_AIR_VALUE;
     config->config_u.config.WaterValue = DEFAULT_WATER_VALUE;
@@ -80,6 +85,9 @@ void setup() {
   } else {
     if (!setupWiFiClient(config)) {
       setupWiFiAP();
+      wifi_ap = 1;
+      dnsServer.start(53, "*", WiFi.softAPIP());
+
       startMDNS(config->config_u.config.hostname);
     } else {
       setupMDNS(config->config_u.config.hostname);
@@ -91,32 +99,34 @@ void setup() {
 }
 
 void loop() {
-  struct hydroponicConfig *config;
-  config = eepromReadData();
+  if (wifi_ap) dnsServer.processNextRequest();
+    // struct hydroponicConfig *config;
+    // config = eepromReadData();
 
 #if defined(ESP8266)
   MDNS.update();
-#endif  // Serial.println("Status on");
-  int soilMoistureValue = 20000;
-  int soilmoisturepercent = 100;
+#endif
+  // Serial.println("Status on");
+  // int soilMoistureValue = 20000;
+  // int soilmoisturepercent = 100;
 
-  soilMoistureValue = sensorRead();
-  Serial.println(soilMoistureValue);
+  // soilMoistureValue = sensorRead();
+  // Serial.println(soilMoistureValue);
 
-  soilmoisturepercent = map(soilMoistureValue, config->config_u.config.AirValue, config->config_u.config.WaterValue, 0, 100);
+  // soilmoisturepercent = map(soilMoistureValue, config->config_u.config.AirValue, config->config_u.config.WaterValue, 0, 100);
 
-  if (soilmoisturepercent > 100) {
-    soilmoisturepercent = 100;
-  } else if (soilmoisturepercent < 0) {
-    soilmoisturepercent = 0;
-  }
+  // if (soilmoisturepercent > 100) {
+  //   soilmoisturepercent = 100;
+  // } else if (soilmoisturepercent < 0) {
+  //   soilmoisturepercent = 0;
+  // }
 
-  if (soilmoisturepercent < 50) {
-    digitalWrite(led_gpio, LOW);
-  } else {
-    digitalWrite(led_gpio, HIGH);
-  }
+  // if (soilmoisturepercent < 50) {
+  //   digitalWrite(led_gpio, LOW);
+  // } else {
+  //   digitalWrite(led_gpio, HIGH);
+  // }
 
-  Serial.println(soilmoisturepercent);
-  delay(500);
+  // Serial.println(soilmoisturepercent);
+  // delay(500);
 }

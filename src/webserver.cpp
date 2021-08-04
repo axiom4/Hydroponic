@@ -83,7 +83,7 @@ void handleRoot(AsyncWebServerRequest *request) {  // When URI / is requested, s
   form += "</br>";
 
   form += "<label for=\"ntpserver\">NTP Sever:</label><br/><input type=\"text\" id=\"ntpserver\" name=\"ntpserver\" placeholder=\"Ntp Server\" value=\"";
-  form += String(s_config->config_u.config.ntp_sever);
+  form += String(s_config->config_u.config.ntp_server);
   form += "\">";
 
   form += "</br>";
@@ -130,7 +130,7 @@ void handleSetup(AsyncWebServerRequest *request) {
 
   strcpy(config->config_u.config.wifi_ssid, request->arg("ssid").c_str());
   strcpy(config->config_u.config.wifi_password, request->arg("password").c_str());
-  strcpy(config->config_u.config.ntp_sever, request->arg("ntpserver").c_str());
+  strcpy(config->config_u.config.ntp_server, request->arg("ntpserver").c_str());
   strcpy(config->config_u.config.hostname, request->arg("hostname").c_str());
 
   eepromWriteData(config);
@@ -176,33 +176,116 @@ void handleGetConfig(AsyncWebServerRequest *request) {
   config = eepromReadData();
 
   String json = "{";
-  json += "\t\"device\": \"" + String(config->config_u.config.device) + "\",\n";
-  json += "\t\"wifi_ssid\": \"" + String(config->config_u.config.wifi_ssid) + "\",\n";
-  json += "\t\"wifi_password\": \"" + String(config->config_u.config.wifi_password) + "\",\n";
-  json += "\t\"ntp_sever\": \"" + String(config->config_u.config.ntp_sever) + "\",\n";
-  json += "\t\"hostname\": \"" + String(config->config_u.config.hostname) + "\",\n";
-  json += "\t\"moisture_air_value\": " + String(config->config_u.config.AirValue) + ",\n";
-  json += "\t\"moisture_water_value\": " + String(config->config_u.config.WaterValue) + "\n";
+  json += "\t\"device\": \"" + String(s_config->config_u.config.device) + "\",\n";
+  json += "\t\"wifi_ssid\": \"" + String(s_config->config_u.config.wifi_ssid) + "\",\n";
+  json += "\t\"wifi_password\": \"" + String(s_config->config_u.config.wifi_password) + "\",\n";
+  json += "\t\"ntp_server\": \"" + String(s_config->config_u.config.ntp_server) + "\",\n";
+  json += "\t\"hostname\": \"" + String(s_config->config_u.config.hostname) + "\",\n";
+  json += "\t\"moisture_air_value\": " + String(s_config->config_u.config.AirValue) + ",\n";
+  json += "\t\"moisture_water_value\": " + String(s_config->config_u.config.WaterValue) + "\n";
   json += "}";
 
   free(config);
   request->send(200, "application/json", json);
 }
 
+void handleConfigSave(AsyncWebServerRequest *request, JsonVariant &json) {
+  StaticJsonDocument<200> data;
+
+  if (json.is<JsonArray>()) {
+    Serial.println("Json Array");
+    data = json.as<JsonArray>();
+  } else if (json.is<JsonObject>()) {
+    Serial.println("Json Array");
+    data = json.as<JsonObject>();
+  }
+
+  String hostname = data["hostname"];
+  String wifi_ssid = data["wifi_ssid"];
+  String wifi_password = data["wifi_password"];
+  String ntp_server = data["ntp_server"];
+  int moisture_air_value = data["moisture_air_value"];
+  int moisture_water_value = data["moisture_water_value"];
+
+  Serial.printf("hostname: %s\n", hostname.c_str());
+  Serial.printf("wifi_ssid: %s\n", wifi_ssid.c_str());
+  Serial.printf("wifi_password: %s\n", wifi_password.c_str());
+  Serial.printf("ntp_server: %s\n", ntp_server.c_str());
+  Serial.printf("moisture_air_value: %d\n", moisture_air_value);
+  Serial.printf("moisture_water_value: %d\n", moisture_water_value);
+
+  strcpy(s_config->config_u.config.wifi_ssid, wifi_ssid.c_str());
+  strcpy(s_config->config_u.config.wifi_password, wifi_password.c_str());
+  strcpy(s_config->config_u.config.ntp_server, ntp_server.c_str());
+  strcpy(s_config->config_u.config.hostname, hostname.c_str());
+
+  s_config->config_u.config.AirValue = moisture_air_value;
+  s_config->config_u.config.WaterValue = moisture_water_value;
+
+  eepromWriteData(s_config);
+
+  String response;
+
+  serializeJson(data, response);
+
+  request->send(200, "application/json", response);
+  Serial.println(response);
+}
+
+// class CaptiveRequestHandler : public AsyncWebHandler {
+//  public:
+//   CaptiveRequestHandler() {
+//     server.serveStatic("/", SPIFFS, "/").setCacheControl("max-age=31536000").setDefaultFile("index.html");
+//     server.on("/rest/config", HTTP_GET, handleGetConfig);
+
+//     server.on("/rest/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+//       AsyncWebServerResponse *response = request->beginResponse(204);
+
+//       // response->addHeader("Allow", "OPTIONS, GET, HEAD, POST");
+//       response->addHeader("Access-Control-Allow-Methods", "OPTIONS, GET, HEAD, POST");
+//       request->send(response);
+//     });
+
+//     server.addHandler(new AsyncCallbackJsonWebHandler("/rest/config", handleConfigSave));
+
+//     // server.onNotFound(handleNotFound);
+//   }
+//   virtual ~CaptiveRequestHandler() {}
+
+//   bool canHandle(AsyncWebServerRequest *request) {
+//     // request->addInterestingHeader("ANY");
+//     return true;
+//   }
+
+//   void handleRequest(AsyncWebServerRequest *request) { request->send(SPIFFS, "/index.html", String(), false); }
+// };
+
 void webserverSetup(struct hydroponicConfig *config) {
   s_config = config;
   //   server.on("/", HTTP_GET, [](struct idroponicConfig *config) { handleSetup(config); });  // Call the 'handleRoot' function when a client requests URI "/"
-  server.on("/settings", handleRoot);
+
+  server.on("/old/settings", handleRoot);
   server.on("/setup", HTTP_POST, handleSetup);
   server.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico");
   server.serveStatic("/", SPIFFS, "/").setCacheControl("max-age=31536000").setDefaultFile("index.html");
 
-  server.on("/rest/getconfig", HTTP_GET, handleGetConfig);
+  server.on("/rest/config", HTTP_GET, handleGetConfig);
 
-  // AsyncCallbackJsonWebHandler *handlerGetConfig = new AsyncCallbackJsonWebHandler("/rest/getconfig", handleGetConfig);
-  // server.addHandler(handlerGetConfig);
+  server.on("/rest/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(204);
+
+    // response->addHeader("Allow", "OPTIONS, GET, HEAD, POST");
+    response->addHeader("Access-Control-Allow-Methods", "OPTIONS, GET, HEAD, POST");
+    request->send(response);
+  });
+
+  server.addHandler(new AsyncCallbackJsonWebHandler("/rest/config", handleConfigSave));
 
   server.onNotFound(handleNotFound);
+
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
+  // server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);  // only when requested from AP
 
   server.begin();  // Actually start the server
   Serial.println("HTTP server started");
