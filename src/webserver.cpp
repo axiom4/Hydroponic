@@ -259,6 +259,21 @@ void handleConfigSave(AsyncWebServerRequest *request, JsonVariant &json) {
 
 //   void handleRequest(AsyncWebServerRequest *request) { request->send(SPIFFS, "/index.html", String(), false); }
 // };
+void handleSystemReboot(AsyncWebServerRequest *request) { 
+  Serial.println("Reboot request");
+
+  if(!request->authenticate("admin", "password"))
+        return request->requestAuthentication();
+
+  String json = "{";
+  json += "\t\"status\": 0,\n";
+  json += "\t\"description\": \"Device reboot.\"\n";
+  json += "}";
+  request->send(200, "application/json", json);
+
+  delay(5000);
+  ESP.restart(); 
+}
 
 void webserverSetup(struct hydroponicConfig *config) {
   s_config = config;
@@ -269,9 +284,9 @@ void webserverSetup(struct hydroponicConfig *config) {
   server.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico");
   server.serveStatic("/", SPIFFS, "/").setCacheControl("max-age=31536000").setDefaultFile("index.html");
 
-  server.on("/rest/config", HTTP_GET, handleGetConfig);
+  server.on("/rest/system/config", HTTP_GET, handleGetConfig);
 
-  server.on("/rest/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+  server.on("/rest/system/config", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(204);
 
     // response->addHeader("Allow", "OPTIONS, GET, HEAD, POST");
@@ -279,7 +294,9 @@ void webserverSetup(struct hydroponicConfig *config) {
     request->send(response);
   });
 
-  server.addHandler(new AsyncCallbackJsonWebHandler("/rest/config", handleConfigSave));
+  server.on("/rest/system/reboot", HTTP_GET, handleSystemReboot).setAuthentication("user", "pass");
+
+  server.addHandler(new AsyncCallbackJsonWebHandler("/rest/system/config", handleConfigSave));
 
   server.onNotFound(handleNotFound);
 
