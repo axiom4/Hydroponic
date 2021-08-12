@@ -8,16 +8,25 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 
+#include <FS.h>
+#define HYDROPONICFS LittleFS
+#include <LittleFS.h>
+
 #elif defined(ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
+
 #include <SPIFFS.h>
+
+#define HYDROPONICFS SPIFFS
 
 #else
 #error "This ain't a ESP8266 or ESP32, dumbo!"
 #endif
 
 #include <NTPClient.h>
+
+#include <WebserverSystemReboot.h>
 
 #define CONFIG_SIZE sizeof(struct hydroponic_config)
 #define SERIAL_SPEED 9600
@@ -57,16 +66,16 @@ typedef struct hydroponicConfig {
 } __attribute__((packed)) pkt;
 
 void eepromSetup();
-void eepromWriteData(struct hydroponicConfig *config);
-struct hydroponicConfig *eepromReadData();
+void eepromWriteData(struct hydroponicConfig* config);
+struct hydroponicConfig* eepromReadData();
 
 void setupWiFiAP();
-bool setupWiFiClient(struct hydroponicConfig *config);
+bool setupWiFiClient(struct hydroponicConfig* config);
 
-void ntpSetup(struct hydroponicConfig *config);
+void ntpSetup(struct hydroponicConfig* config);
 void ntpLoop();
 
-void webserverSetup(struct hydroponicConfig *config);
+void webserverSetup(struct hydroponicConfig* config);
 void Webserver();
 
 int sensorRead();

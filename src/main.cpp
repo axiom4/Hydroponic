@@ -6,13 +6,19 @@ DNSServer dnsServer;
 
 const byte led_gpio = 33;
 
-byte relON[] = {0xA0, 0x01, 0x01, 0xA2};   // Hex command to send to serial for open relay
-byte relOFF[] = {0xA0, 0x01, 0x00, 0xA1};  // Hex command to send to serial for close relay
+byte relON[] = {0xA0, 0x01, 0x01,
+                0xA2};  // Hex command to send to serial for open relay
+byte relOFF[] = {0xA0, 0x01, 0x00,
+                 0xA1};  // Hex command to send to serial for close relay
 
-void Off() { Serial.write(relOFF, sizeof(relOFF)); };
-void On() { Serial.write(relON, sizeof(relON)); };
+void Off() {
+  Serial.write(relOFF, sizeof(relOFF));
+};
+void On() {
+  Serial.write(relON, sizeof(relON));
+};
 
-void setupMDNS(const char *hostname) {
+void setupMDNS(const char* hostname) {
   if (MDNS.begin(hostname)) {  // Start the mDNS responder for esp8266.local
     Serial.println("mDNS responder started");
   } else {
@@ -20,7 +26,7 @@ void setupMDNS(const char *hostname) {
   }
 }
 
-void startMDNS(const char *hostname) {
+void startMDNS(const char* hostname) {
 #if defined(ESP8266)
 
   if (!MDNS.begin(hostname, WiFi.softAPIP())) {
@@ -49,10 +55,10 @@ void startMDNS(const char *hostname) {
 
 void setup() {
   eepromSetup();
-  SPIFFS.begin();
+  HYDROPONICFS.begin();
   Serial.begin(SERIAL_SPEED);
   Serial.println("Init Hydroponic");
-  struct hydroponicConfig *config;
+  struct hydroponicConfig* config;
 
   config = eepromReadData();
 
@@ -78,7 +84,8 @@ void setup() {
   // strcpy(config->config_u.config.wifi_ssid, "silenthill-2g");
   // strcpy(config->config_u.config.wifi_password, "gibsonlespaul");
 
-  Serial.printf("ssid: %s\npassword: %s\n", config->config_u.config.wifi_ssid, config->config_u.config.wifi_password);
+  Serial.printf("ssid: %s\npassword: %s\n", config->config_u.config.wifi_ssid,
+                config->config_u.config.wifi_password);
 
   if (!strcmp(config->config_u.config.wifi_ssid, WIFI_DEFAULT_SSID)) {
     setupWiFiAP();
@@ -99,7 +106,8 @@ void setup() {
 }
 
 void loop() {
-  if (wifi_ap) dnsServer.processNextRequest();
+  if (wifi_ap)
+    dnsServer.processNextRequest();
     // struct hydroponicConfig *config;
     // config = eepromReadData();
 
@@ -113,7 +121,9 @@ void loop() {
   // soilMoistureValue = sensorRead();
   // Serial.println(soilMoistureValue);
 
-  // soilmoisturepercent = map(soilMoistureValue, config->config_u.config.AirValue, config->config_u.config.WaterValue, 0, 100);
+  // soilmoisturepercent = map(soilMoistureValue,
+  // config->config_u.config.AirValue, config->config_u.config.WaterValue, 0,
+  // 100);
 
   // if (soilmoisturepercent > 100) {
   //   soilmoisturepercent = 100;
