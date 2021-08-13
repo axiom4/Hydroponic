@@ -4,7 +4,8 @@
 int wifi_ap = 0;
 DNSServer dnsServer;
 
-const byte led_gpio = 33;
+bool toggle_reboot = false;
+int relay_status = HIGH;
 
 byte relON[] = {0xA0, 0x01, 0x01,
                 0xA2};  // Hex command to send to serial for open relay
@@ -66,8 +67,8 @@ void setup() {
     ESP.restart();
   }
 
-  pinMode(led_gpio, OUTPUT);
-  digitalWrite(led_gpio, HIGH);
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, HIGH);
 
   if (strcmp(config->config_u.config.device, DEVICE)) {
     strcpy(config->config_u.config.device, DEVICE);
@@ -114,6 +115,11 @@ void loop() {
 #if defined(ESP8266)
   MDNS.update();
 #endif
+
+  if (toggle_reboot) {
+    delay(1000);
+    ESP.restart();
+  }
   // Serial.println("Status on");
   // int soilMoistureValue = 20000;
   // int soilmoisturepercent = 100;

@@ -26,8 +26,6 @@
 
 #include <NTPClient.h>
 
-#include <WebserverSystemReboot.h>
-
 #define CONFIG_SIZE sizeof(struct hydroponic_config)
 #define SERIAL_SPEED 9600
 
@@ -46,7 +44,11 @@
 
 #define ADC1_CH4 32
 
+#define RELAY_PIN 2
+
 const int moisturePin = ADC1_CH4;
+extern bool toggle_reboot;
+extern int relay_status;
 
 struct hydroponic_config {
   char device[20];

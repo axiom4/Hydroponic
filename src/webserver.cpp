@@ -81,8 +81,8 @@ void handleConfigSave(AsyncWebServerRequest* request, JsonVariant& json) {
 void handleSystemReboot(AsyncWebServerRequest* request) {
   Serial.println("Reboot request");
 
-  if (!request->authenticate("admin", "password"))
-    return request->requestAuthentication();
+  // if (!request->authenticate("admin", "password"))
+  //   return request->requestAuthentication();
 
   String json = "{";
   json += "\t\"status\": 0,\n";
@@ -90,8 +90,7 @@ void handleSystemReboot(AsyncWebServerRequest* request) {
   json += "}";
   request->send(200, "application/json", json);
 
-  delay(5000);
-  ESP.restart();
+  toggle_reboot = true;
 }
 
 float mapfloat(float x,
@@ -148,14 +147,58 @@ void handleSystemBattery(AsyncWebServerRequest* request) {
   request->send(200, "application/json", json);
 }
 
+void handleGetRelayStatus(AsyncWebServerRequest* request) {
+  Serial.println("Relay status request");
+
+  // if (!request->authenticate("admin", "password"))
+  //   return request->requestAuthentication();
+  String status = "off";
+
+  if (relay_status == LOW)
+    status = "on";
+
+  String json = "{";
+  json += "\t\"status\": \"" + status + "\",\n";
+  json += "\t\"description\": \"Relay status\"\n";
+  json += "}";
+  request->send(200, "application/json", json);
+}
+
+void handleSetRelayStatus(AsyncWebServerRequest* request, JsonVariant& json) {
+  StaticJsonDocument<200> data;
+
+  if (json.is<JsonArray>()) {
+    data = json.as<JsonArray>();
+  } else if (json.is<JsonObject>()) {
+    data = json.as<JsonObject>();
+  }
+
+  String status = data["status"];
+
+  if (status == "on") {
+    relay_status = LOW;
+  } else {
+    relay_status = HIGH;
+  }
+  digitalWrite(RELAY_PIN, relay_status);
+
+  String json_out = "{";
+  json_out += "\t\"status\": \"" + String(status) + "\",\n";
+  json_out += "\t\"description\": \"Relay status\"\n";
+  json_out += "}";
+  request->send(200, "application/json", json_out);
+}
+
 void webserverSetup(struct hydroponicConfig* config) {
   s_config = config;
 
+  /* Angular.io Web Pagees */
   server.serveStatic("/favicon.ico", HYDROPONICFS, "/favicon.ico");
   server.serveStatic("/", HYDROPONICFS, "/")
       .setCacheControl("max-age=31536000")
       .setDefaultFile("index.html");
 
+  /*  Configuration Service */
   server.on("/rest/system/config", HTTP_GET, handleGetConfig);
 
   server.on("/rest/system/config", HTTP_OPTIONS,
@@ -168,11 +211,19 @@ void webserverSetup(struct hydroponicConfig* config) {
               request->send(response);
             });
 
-  server.on("/rest/system/reboot", HTTP_GET, handleSystemReboot);
-  server.on("/rest/system/battery", HTTP_GET, handleSystemBattery);
-
   server.addHandler(
       new AsyncCallbackJsonWebHandler("/rest/system/config", handleConfigSave));
+
+  /* Reboot Service */
+  server.on("/rest/system/reboot", HTTP_GET, handleSystemReboot);
+
+  /* Battery Service */
+  server.on("/rest/system/battery", HTTP_GET, handleSystemBattery);
+
+  /* Relay Service */
+  server.on("/rest/relay", HTTP_GET, handleGetRelayStatus);
+  server.addHandler(
+      new AsyncCallbackJsonWebHandler("/rest/relay", handleSetRelayStatus));
 
   server.onNotFound(handleNotFound);
 
