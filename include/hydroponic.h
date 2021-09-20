@@ -49,6 +49,7 @@
 const int moisturePin = ADC1_CH4;
 extern bool toggle_reboot;
 extern int relay_status;
+extern AsyncWebSocket ws;
 
 struct hydroponic_config {
   char device[20];

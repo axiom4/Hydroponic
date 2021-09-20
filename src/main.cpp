@@ -120,6 +120,12 @@ void loop() {
     delay(1000);
     ESP.restart();
   }
+
+  ws.textAll(
+    "{\"command\":\"result\",\"resultof\":\"userlist\",\"result\": false}"
+  );
+
+  delay(5000);
   // Serial.println("Status on");
   // int soilMoistureValue = 20000;
   // int soilmoisturepercent = 100;

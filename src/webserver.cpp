@@ -4,10 +4,58 @@
 #include <ArduinoJson.h>
 
 AsyncWebServer server(80);
+AsyncWebSocket ws("/events");
+
 struct hydroponicConfig* s_config;
 
 void handleNotFound(AsyncWebServerRequest* request) {
   request->redirect("/");
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient* client) {
+    AwsFrameInfo *info = (AwsFrameInfo*)arg;
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+      const uint8_t size = JSON_OBJECT_SIZE(1);
+      StaticJsonDocument<size> json;
+      DeserializationError err = deserializeJson(json, data);
+      if (err) {
+        Serial.print(F("deserializeJson() failed with code "));
+        Serial.println(err.c_str());
+        return;
+      }
+
+      const char* action = json["data"];
+
+      if(action) {
+        if(strcmp(action, "ping") == 0) {
+          client->text("{ \"data\": \"pong\" }");
+        }
+      }
+    }
+}
+
+void onWsEvent(AsyncWebSocket* server,
+               AsyncWebSocketClient* client,
+               AwsEventType type,
+               void* arg,
+               uint8_t* data,
+               size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    Serial.println("Websocket client connection received");
+    client->text("{ \"connection\": \"Hello from ESP32 Server\" }");
+
+  } else if (type == WS_EVT_DISCONNECT) {
+    Serial.println("Client disconnected");
+  } else if (type == WS_EVT_DATA) {
+    handleWebSocketMessage(arg, data, len, client);
+
+    // for (int i = 0; i < len; i++) {
+    //   Serial.print(data[i]);
+    //   Serial.print("|");
+    // }
+
+    // Serial.println();
+  }
 }
 
 void handleGetConfig(AsyncWebServerRequest* request) {
@@ -255,6 +303,10 @@ void webserverSetup(struct hydroponicConfig* config) {
 
   /* Wi-Fi scan Service */
   server.on("/rest/wifi/scan", HTTP_GET, handleWifiScan);
+
+  /* WebSocket Service */
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
 
   server.onNotFound(handleNotFound);
 
